@@ -1,0 +1,32 @@
+name: Security Test Pipeline
+'on':
+  push:
+    branches:
+      - main
+jobs:
+  scan_secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Install dependencies
+        run: |
+          pip install detect-secrets
+      - name: Scan for secrets
+        run: |
+          detect-secrets scan --all-files
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{secrets.SNYK_TOKEN}}
+        with:
+          args: '--sarif-file-output=snyk.sarif'
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk.sarif
